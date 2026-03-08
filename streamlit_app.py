@@ -3,72 +3,89 @@ import yfinance as yf
 import pandas as pd
 import time
 
-# إعدادات الصفحة
-st.set_page_config(page_title="TCR - Tadawul Crawler & Ranker", layout="wide")
+# 1. إعدادات الواجهة الرسومية لنظام TCR
+st.set_page_config(page_title="TCR - Tadawul Crawler & Ranker", page_icon="📈", layout="wide")
 
-# العنوان والوصف
-st.title("🚀 نظام TCR لفلترة السوق السعودي")
-st.markdown("---")
+# تصميم بسيط واحترافي للواجهة
+st.markdown("""
+    <style>
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #1E88E5; color: white; font-weight: bold; }
+    .stDataFrame { border: 1px solid #e6e9ef; border-radius: 5px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# القائمة الجانبية للمعايير (يمكنك تعديلها يدوياً)
-st.sidebar.header("⚙️ معايير الفحص (لينش/بافيت)")
-target_peg = st.sidebar.number_input("الحد الأقصى لـ PEG", value=1.0)
-target_pe = st.sidebar.number_input("الحد الأقصى لـ P/E", value=15.0)
-min_growth = st.sidebar.slider("أدنى نمو للأرباح %", 0, 100, 20)
+st.title("🛡️ نظام TCR لفلترة الأسهم السعودية")
+st.info("هذا التطبيق يقوم بمسح السوق السعودي (TASI) للبحث عن فرص النمو (بيتر لينش) والعوائد (بافيت) وعرضها هنا مباشرة.")
 
+# 2. القائمة الجانبية للتحكم في صرامة الفلاتر
+with st.sidebar:
+    st.header("⚙️ معايير التصفية")
+    peg_limit = st.slider("الحد الأقصى لـ PEG", 0.1, 2.0, 1.0)
+    pe_limit = st.slider("الحد الأقصى لـ P/E", 5, 40, 15)
+    min_eps_growth = st.number_input("أدنى نمو للأرباح %", value=20)
+    st.divider()
+    st.caption("نظام TCR - تحليل آلي يعتمد على البيانات الحية.")
+
+# 3. وظيفة التحليل المالي لكل سهم
 def analyze_stock(symbol):
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
         if 'currentPrice' not in info: return None
         
-        # استخراج البيانات المالية
+        # استخراج البيانات المالية الأساسية
         peg = info.get('pegRatio', 999)
         eps_g = info.get('earningsQuarterlyGrowth', 0) * 100
-        debt_equity = info.get('debtToEquity', 999) / 100
         pe = info.get('trailingPE', 999)
+        debt_equity = info.get('debtToEquity', 999) / 100
         payout = info.get('payoutRatio', 0) * 100
         net_cash = info.get('totalCash', 0) - info.get('totalDebt', 0)
 
-        # فحص النمو (Lynch) والعوائد (Buffett)
-        is_growth = (peg <= target_peg and min_growth <= eps_g <= 50 and debt_equity < 0.35)
-        is_value = (pe <= target_pe and 20 <= payout <= 60 and debt_equity <= 0.50)
+        # تطبيق معايير TCR (نمو أو عوائد)
+        is_growth = (peg <= peg_limit and min_eps_growth <= eps_g <= 50 and debt_equity < 0.35)
+        is_value = (pe <= pe_limit and 20 <= payout <= 60 and debt_equity <= 0.50)
 
         if is_growth or is_value:
             return {
                 "الرمز": symbol,
                 "الاسم": info.get('longName', 'N/A'),
-                "السعر": info.get('currentPrice'),
-                "النوع": "🚀 نمو" if is_growth else "💰 عوائد",
-                "P/E": pe,
-                "PEG": peg,
-                "الديون": f"{debt_equity:.2f}",
-                "النقد الصافي": f"{net_cash:,.0f} SAR"
+                "السعر": f"{info.get('currentPrice')} ر.س",
+                "التصنيف": "🚀 فرصة نمو" if is_growth else "💰 سهم عوائد",
+                "P/E": round(pe, 2) if pe != 999 else "N/A",
+                "PEG": peg if peg != 999 else "N/A",
+                "الديون": round(debt_equity, 2),
+                "النقد الصافي": f"{net_cash:,.0f} ر.س"
             }
     except:
         return None
 
-# زر البدء
-if st.button("بدأ فحص السوق السعودي 🔍"):
-    with st.spinner("جاري فحص جميع الشركات... قد يستغرق ذلك دقائق"):
-        found = []
-        # نطاقات السوق السعودي
-        ranges = [range(1000, 1331), range(2000, 2383), range(4000, 4349), range(7000, 7205)]
-        
-        placeholder = st.empty()
-        for r in ranges:
-            for code in r:
-                symbol = f"{code}.SR"
-                placeholder.text(f"يتم فحص الآن: {symbol}")
-                res = analyze_stock(symbol)
-                if res:
-                    found.append(res)
-                time.sleep(0.1)
+# 4. زر التشغيل وعرض النتائج داخل التطبيق
+if st.button("إطلاق رادار TCR لفحص السوق السعودي 🔍"):
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    found_stocks = []
 
-        if found:
-            st.success(f"✅ تم العثور على {len(found)} فرص!")
-            df = pd.DataFrame(found)
-            st.table(df)
-        else:
-            st.warning("لم يتم العثور على فرص تطابق المعايير اليوم.")
+    # نطاقات رموز تداول (TASI)
+    ranges = [range(1000, 1331), range(2000, 2383), range(4000, 4349), range(7000, 7205)]
+    all_codes = [f"{code}.SR" for r in ranges for code in r]
+    
+    total_count = len(all_codes)
+    
+    for idx, sym in enumerate(all_codes):
+        status_text.text(f"يتم الآن فحص وتحليل السهم: {sym} ({idx+1}/{total_count})")
+        res = analyze_stock(sym)
+        if res:
+            found_stocks.append(res)
+        progress_bar.progress((idx + 1) / total_count)
+        # تأخير بسيط لضمان استقرار جلب البيانات من Yahoo Finance
+        if idx % 15 == 0: time.sleep(0.1)
 
+    status_text.empty()
+    st.markdown("---")
+    
+    if found_stocks:
+        st.success(f"🎯 تم العثور على ({len(found_stocks)}) فرص تطابق معايير TCR اليوم!")
+        df = pd.DataFrame(found_stocks)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.warning("⚠️ لا توجد شركات في السوق السعودي تطابق المعايير الصارمة حالياً.")
