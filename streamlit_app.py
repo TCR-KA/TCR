@@ -2,105 +2,134 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import time
+import plotly.graph_objects as go
 
-# --- 1. إعداد واجهة المختبر الفاخرة ---
-st.set_page_config(page_title="TCR Financial Lab", layout="wide")
+# --- 1. واجهة المختبر السيبراني (Cyber-Black & Purple) ---
+st.set_page_config(page_title="TCR - Sector Master", layout="wide")
 
 st.markdown("""
     <style>
-    .main { background-color: #0b0e14; color: #ffffff; }
-    .op-log { 
-        background-color: #000; border: 1px solid #bc13fe; padding: 15px; 
-        border-radius: 10px; height: 300px; overflow-y: auto; 
-        font-family: 'Courier New', monospace; font-size: 13px; color: #00ff41;
-    }
-    .status-card { background: #161B22; border: 1px solid #30363D; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
-    .stButton>button { background: linear-gradient(45deg, #bc13fe, #3d5afe); color: white; border: none; font-weight: bold; width: 100%; height: 3.5em; }
+    .main { background-color: #050505; color: #bc13fe; }
+    .stApp { background-color: #050505; }
+    .neon-card { border: 2px solid #bc13fe; border-radius: 15px; padding: 25px; background: rgba(10, 10, 10, 0.9); box-shadow: 0 0 20px rgba(188, 19, 254, 0.3); }
+    .stButton>button { background: linear-gradient(45deg, #bc13fe, #3d5afe); color: white; font-weight: bold; border-radius: 10px; height: 3.5em; width: 100%; border: none; }
+    .op-log { background: #000; border-left: 3px solid #3d5afe; padding: 10px; font-family: monospace; color: #00ff41; font-size: 11px; height: 200px; overflow-y: auto; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. المحرك المالي العميق (Deep Analysis Engine) ---
-def deep_tcr_analysis(symbol, log_placeholder):
+# --- 2. تعريف قطاعات السوق السعودي (2026 TASI Sectors) ---
+TASI_SECTORS = {
+    "الطاقة": ["2222.SR", "2310.SR", "2030.SR", "5110.SR"],
+    "المواد الأساسية": ["2010.SR", "2020.SR", "2350.SR", "1211.SR", "3001.SR", "3010.SR", "3020.SR"],
+    "البنوك": ["1120.SR", "1150.SR", "1180.SR", "1010.SR", "1050.SR", "1060.SR", "1080.SR", "1140.SR"],
+    "الاتصالات": ["7010.SR", "7020.SR", "7030.SR", "7040.SR"],
+    "الرعاية الصحية": ["4009.SR", "4005.SR", "4001.SR", "4013.SR", "4003.SR"],
+    "إنتاج الأغذية": ["2270.SR", "2280.SR", "6010.SR", "6060.SR"],
+    "السلع الرأسمالية": ["2320.SR", "1301.SR", "1303.SR", "1214.SR"],
+    "النقل": ["4260.SR", "4040.SR", "4110.SR"],
+    "الاستثمار والتمويل": ["2120.SR", "2170.SR", "4081.SR"],
+    "تجزئة الأغذية": ["4006.SR", "4161.SR", "4163.SR"],
+    "الخدمات التجارية والمهنية": ["4071.SR", "4072.SR", "1831.SR"],
+    "المرافق العامة": ["2080.SR", "5110.SR", "2081.SR"],
+    "التطوير العقاري": ["4020.SR", "4150.SR", "4250.SR", "4300.SR"],
+    "إدارة وتطوير العقارات": ["4321.SR", "4100.SR", "4012.SR"]
+}
+
+# --- 3. محرك التحليل المالي المزدوج (Manual Calculations) ---
+def deep_tcr_scan(symbol, log):
     try:
         ticker = yf.Ticker(symbol)
-        
-        # المرحلة 1: جمع البيانات الخام
-        log_placeholder.markdown(f"📡 `[{symbol}]` جاري جلب القوائم المالية التاريخية (4 سنوات)...")
-        income_stmt = ticker.quarterly_income_stmt
-        balance_sheet = ticker.quarterly_balance_sheet
-        cash_flow = ticker.quarterly_cashflow
         info = ticker.info
-
-        if income_stmt.empty or balance_sheet.empty:
-            log_placeholder.markdown(f"⚠️ `[{symbol}]` بيانات غير مكتملة. تخطي.")
-            return None
-
-        # المرحلة 2: تحليل نمو بيتر لينش (Peter Lynch)
-        log_placeholder.markdown(f"🔍 `[{symbol}]` جاري فحص معايير النمو (بيتر لينش)...")
-        op_inc = income_stmt.loc['Operating Income']
-        growth = op_inc.pct_change(periods=-1).mean() # متوسط النمو التشغيلي
+        name = info.get('longName', symbol)
+        
+        # المرحلة 1: جمع البيانات المالية الخام
+        log.write(f"⚙️ {name}: جلب الميزانية وقائمة الدخل السنوية...")
+        financials = ticker.financials
+        balance = ticker.balance_sheet
+        
+        # 1. معايير بيتر لينش (نمو)
         peg = info.get('pegRatio', 99)
-        debt_to_equity = info.get('debtToEquity', 999) / 100
+        eps_g = info.get('earningsQuarterlyGrowth', 0) * 100
+        debt_equity = info.get('debtToEquity', 999) / 100
+        net_cash = (info.get('totalCash', 0) - info.get('totalDebt', 0))
         
-        is_growth = (peg < 1.0 and 0.20 <= growth <= 0.50 and debt_to_equity < 0.35)
+        lynch_pass = (peg < 1.0 and 20 <= eps_g <= 50 and debt_equity < 0.35 and net_cash > 0)
         
-        # المرحلة 3: تحليل عوائد وارن بافيت (Warren Buffett)
-        log_placeholder.markdown(f"💰 `[{symbol}]` جاري فحص معايير العوائد والقيمة (وارن بافيت)...")
+        # 2. معايير بافيت (عوائد)
         pe = info.get('trailingPE', 99)
-        payout = info.get('payoutRatio', 0)
-        # فحص استمرارية التوزيعات
-        div_history = ticker.dividends
-        has_consistent_div = len(div_history.resample('YE').sum()) >= 5
+        payout = info.get('payoutRatio', 0) * 100
         
-        is_value = (pe <= 15 and 0.20 <= payout <= 0.60 and debt_to_equity <= 0.50)
+        buffett_pass = (pe <= 15 and 20 <= payout <= 60 and debt_equity < 0.50)
 
-        # المرحلة 4: تقييم النتيجة
-        final_type = "🚀 نمو (Lynch)" if is_growth else ("💎 عوائد (Buffett)" if is_value else None)
+        # التقييم
+        result_type = "🚀 نمو (Lynch)" if lynch_pass else ("💰 عوائد (Buffett)" if buffett_pass else "FAIL")
         
-        if final_type:
-            log_placeholder.markdown(f"✅ `[{symbol}]` تطابق السهم مع فئة: {final_type}")
-        else:
-            log_placeholder.markdown(f"❌ `[{symbol}]` لم يطابق المعايير الصارمة.")
-
         return {
-            "الرمز": symbol, "الاسم": info.get('longName', 'N/A'),
-            "النوع": final_type, "P/E": pe, "PEG": peg, "نمو": f"{growth*100:.1f}%",
-            "ديون": debt_to_equity, "توزيع": f"{payout*100:.1f}%"
+            "symbol": symbol, "name": name, "type": result_type,
+            "peg": peg, "eps_g": eps_g, "debt": debt_equity, "pe": pe, "payout": payout,
+            "status": "PASS" if result_type != "FAIL" else "FAIL"
         }
-    except Exception as e:
-        log_placeholder.markdown(f"🛑 `[{symbol}]` خطأ أثناء التحليل: {str(e)}")
-        return None
+    except: return None
 
-# --- 3. بناء لوحة القيادة ---
-st.title("🛡️ نظام TCR: مختبر تحليل الأسهم السعودية")
-st.markdown("---")
+# --- 4. واجهة التطبيق التفاعلية ---
+st.markdown("<h1 style='text-align:center; color:#bc13fe;'>🔮 TCR ULTIMATE: SECTOR ANALYZER</h1>", unsafe_allow_html=True)
 
-col_left, col_right = st.columns([1, 2])
+col_ctrl, col_lab = st.columns([1, 2])
 
-with col_left:
-    st.subheader("⚙️ التحكم والعمليات")
-    start_btn = st.button("إطلاق المسح العميق ⚡")
-    st.write("📖 **صندوق العمليات الحية:**")
-    log_area = st.empty()
-    log_content = ""
+with col_ctrl:
+    st.markdown("### 🛰️ مركز التحكم")
+    sector_choice = st.selectbox("اختر القطاع للفحص:", ["كامل السوق"] + list(TASI_SECTORS.keys()))
+    
+    c1, c2 = st.columns(2)
+    start_btn = c1.button("إطلاق المسح ⚡")
+    stop_btn = c2.button("إيقاف البحث 🛑")
+    
+    st.markdown("📖 **سجل العمليات الحية:**")
+    op_log = st.empty()
 
-with col_right:
-    st.subheader("🏆 النتائج النهائية (النخبة)")
-    results_area = st.container()
+with col_lab:
+    st.markdown("### 🔬 مختبر الفحص الحي")
+    live_bench = st.empty()
+
+results_area = st.container()
 
 if start_btn:
-    ranges = [range(1000, 1331), range(2000, 2383), range(4000, 4349), range(7000, 7205)]
-    all_codes = [f"{c}.SR" for r in ranges for c in r]
+    # تحديد الشركات بناءً على الخيار
+    target_symbols = []
+    if sector_choice == "كامل السوق":
+        for s_list in TASI_SECTORS.values(): target_symbols.extend(s_list)
+    else:
+        target_symbols = TASI_SECTORS[sector_choice]
     
     found_stocks = []
-    
-    for sym in all_codes:
-        # تحديث صندوق العمليات
-        res = deep_tcr_analysis(sym, log_area)
-        if res and res["النوع"]:
-            found_stocks.append(res)
-            with results_area:
-                st.success(f"🎯 فرصة مكتشفة: {res['الاسم']} ({res['الرمز']})")
-                st.write(pd.DataFrame([res]))
+    for idx, sym in enumerate(target_symbols):
+        if stop_btn: break
         
-        time.sleep(0.1) # سرعة معتدلة لملاحظة العمليات
+        log_txt = f"🔍 يتم الآن تحليل: {sym}..."
+        op_log.markdown(f"<div class='op-log'>{log_txt}</div>", unsafe_allow_html=True)
+        
+        res = deep_tcr_scan(sym, st)
+        if res:
+            # عرض عملية الفحص بخانات منفصلة
+            with live_bench.container():
+                st.markdown(f"""
+                <div class='neon-card'>
+                    <h3>الشركة: {res['name']} ({res['symbol']})</h3>
+                    <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;'>
+                        <div><b>PEG:</b> {res['peg']}</div>
+                        <div><b>P/E:</b> {res['pe']}</div>
+                        <div><b>Debt/Equity:</b> {res['debt']}</div>
+                    </div>
+                    <hr>
+                    <div style='color:{"#00ff41" if res["status"]=="PASS" else "#ff4b2b"}'>التقييم: {res['type']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            if res["status"] == "PASS":
+                found_stocks.append(res)
+        time.sleep(0.1)
+
+    st.markdown("---")
+    if found_stocks:
+        st.success(f"🎯 تم العثور على {len(found_stocks)} فرص ذهبية!")
+        st.table(pd.DataFrame(found_stocks))
