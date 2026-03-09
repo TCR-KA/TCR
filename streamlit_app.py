@@ -7,47 +7,19 @@ import plotly.graph_objects as go
 # --- 1. هندسة الواجهة السيبرانية (Dashboard UI) ---
 st.set_page_config(page_title="TCR Ultimate Dashboard", layout="wide", initial_sidebar_state="collapsed")
 
-# تصميم CSS مخصص تماماً ليطابق الصورة
 st.markdown("""
     <style>
     .main { background-color: #0b0e14; color: #ffffff; font-family: 'Inter', sans-serif; }
     .stApp { background-color: #0b0e14; }
-    
-    /* تصميم البطاقات الزجاجية المتطورة */
-    .card {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(5px);
-        height: 100%;
-    }
-    
-    /* شريط المسح العلوي */
-    .scanner-bar {
-        background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
-        border-bottom: 2px solid #bc13fe;
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-    
+    .card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 20px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); height: 100%; }
+    .scanner-bar { background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%); border-bottom: 2px solid #bc13fe; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
     .neon-purple { color: #bc13fe; text-shadow: 0 0 10px #bc13fe; font-weight: bold; }
     .neon-blue { color: #3d5afe; text-shadow: 0 0 10px #3d5afe; font-weight: bold; }
-    
-    /* الأزرار الاحترافية */
-    .stButton>button {
-        background: linear-gradient(45deg, #bc13fe, #3d5afe);
-        color: white; border: none; border-radius: 8px;
-        height: 3.5em; font-weight: bold; width: 100%;
-        text-transform: uppercase; letter-spacing: 2px;
-    }
+    .stButton>button { background: linear-gradient(45deg, #bc13fe, #3d5afe); color: white; border: none; border-radius: 8px; height: 3.5em; font-weight: bold; width: 100%; text-transform: uppercase; letter-spacing: 2px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. محرك الرسوم التفاعلية (Interactive Gauges) ---
+# --- 2. محرك الرسوم التفاعلية المطور بمفاتيح فريدة ---
 def create_gauge(title, value, min_val, max_val, target):
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
@@ -73,7 +45,6 @@ def run_deep_scan(symbol):
         info = ticker.info
         name = info.get('longName', symbol)
         
-        # استخراج المعايير الـ 7 الصارمة
         metrics = {
             "PEG": info.get('pegRatio', 9.9),
             "EPS_G": info.get('earningsQuarterlyGrowth', 0) * 100,
@@ -91,29 +62,22 @@ def run_deep_scan(symbol):
 # --- 4. بناء لوحة التحكم التفاعلية ---
 st.markdown("<h1 style='text-align:center; color:#bc13fe; text-shadow:0 0 15px #bc13fe;'>🛡️ TCR ULTIMATE VANGUARD</h1>", unsafe_allow_html=True)
 
-# شريط الحالة العلوي (الثابت)
 scanner_header = st.empty()
-
-# تقسيم الشاشة (المربعات المنفصلة)
 col_left, col_right = st.columns([2, 1])
 
 with col_left:
     st.markdown("### 🛰️ رادار التحليل الحي")
-    analysis_grid = st.empty() # هنا تظهر البطاقات والرسوم
+    analysis_grid = st.empty()
 
 with col_right:
     st.markdown("### 🏺 أرشيف النخبة")
     elite_vault = st.container()
 
 if st.button("LAUNCH SYSTEM SCAN (بدء المسح الشامل)"):
-    # نطاقات تاسي الكاملة
     ranges = [range(1000, 1331), range(2000, 2383), range(4000, 4349), range(7000, 7205)]
     all_symbols = [f"{c}.SR" for r in ranges for c in r]
     
-    found_elite = []
-    
-    for sym in all_symbols:
-        # 1. تحديث شريط الحالة (الوقت والبدء)
+    for idx, sym in enumerate(all_symbols):
         scanner_header.markdown(f"""
             <div class="scanner-bar">
                 <span class="neon-blue">جاري الفحص الآن:</span> 
@@ -126,17 +90,15 @@ if st.button("LAUNCH SYSTEM SCAN (بدء المسح الشامل)"):
         
         if result:
             m = result['metrics']
-            # 2. تحديث لوحة الرسوم والبطاقات (تفاعلية حية)
             with analysis_grid.container():
                 st.markdown(f"#### 🏷️ الشركة الحالية: {result['name']} | تم التحليل في: {result['time']}")
-                
                 c1, c2, c3 = st.columns(3)
-                # رسم بياني تفاعلي لكل مؤشر
-                c1.plotly_chart(create_gauge("PEG Ratio", m['PEG'], 0, 3, 1), use_container_width=True)
-                c2.plotly_chart(create_gauge("EPS Growth %", m['EPS_G'], -50, 100, 20), use_container_width=True)
-                c3.plotly_chart(create_gauge("P/E Ratio", m['PE'], 0, 50, 15), use_container_width=True)
                 
-                # بطاقات البيانات الإضافية
+                # إضافة key فريد لكل رسم بياني لتجنب خطأ التكرار
+                c1.plotly_chart(create_gauge("PEG Ratio", m['PEG'], 0, 3, 1), use_container_width=True, key=f"peg_{idx}")
+                c2.plotly_chart(create_gauge("EPS Growth %", m['EPS_G'], -50, 100, 20), use_container_width=True, key=f"eps_{idx}")
+                c3.plotly_chart(create_gauge("P/E Ratio", m['PE'], 0, 50, 15), use_container_width=True, key=f"pe_{idx}")
+                
                 st.markdown(f"""
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 20px;">
                     <div class="card"><small>الديون/الملكية</small><br><b class="neon-blue">{m['DEBT']:.2f}</b></div>
@@ -146,13 +108,9 @@ if st.button("LAUNCH SYSTEM SCAN (بدء المسح الشامل)"):
                 </div>
                 """, unsafe_allow_html=True)
 
-            # 3. اختبار النخبة (لينش وبافيت)
             is_elite = (m['PEG'] < 1.0 and 20 <= m['EPS_G'] <= 50 and m['DEBT'] < 0.35 and m['PE'] <= 15)
-            
             if is_elite:
-                found_elite.append(result)
                 with elite_vault:
                     st.success(f"🏆 {result['name']} ({result['symbol']})")
         
-        time.sleep(0.01) # سرعة الفحص المتطورة
-
+        time.sleep(0.01)
