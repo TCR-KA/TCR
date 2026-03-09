@@ -3,21 +3,44 @@ import yfinance as yf
 import pandas as pd
 import time
 
-# --- 1. الإعدادات الجمالية (Dark Mode & UI) ---
-st.set_page_config(page_title="TCR - Lynch & Buffett Master", page_icon="🛡️", layout="wide")
+# --- 1. التصميم السيبراني (Neon Dark Theme) ---
+st.set_page_config(page_title="TCR - Cyber Scan", page_icon="🔮", layout="wide")
 
 st.markdown("""
     <style>
-    .main { background-color: #0E1117; color: #E0E0E0; }
-    .stMetric { background-color: #161B22; border: 1px solid #30363D; padding: 15px; border-radius: 10px; }
-    .status-card { padding: 20px; border-radius: 12px; background-color: #161B22; border: 2px solid #30363D; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-    .match-tag { color: #2ecc71; font-weight: bold; }
-    .fail-tag { color: #e74c3c; font-weight: bold; }
-    h1, h2, h3 { color: #58A6FF !important; text-align: center; }
+    /* الخلفية والخطوط العامة */
+    .main { background-color: #050505; color: #E0E0E0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    
+    /* تصميم البطاقات والحاويات */
+    .stApp { background-color: #050505; }
+    .status-card { 
+        background: rgba(15, 15, 15, 0.9); 
+        border: 1px solid #bc13fe; 
+        box-shadow: 0 0 15px #bc13fe; 
+        padding: 25px; border-radius: 15px; 
+        margin-bottom: 25px;
+    }
+    
+    /* نصوص النيون */
+    .neon-purple { color: #bc13fe; text-shadow: 0 0 10px #bc13fe; font-weight: bold; }
+    .neon-blue { color: #3d5afe; text-shadow: 0 0 10px #3d5afe; font-weight: bold; }
+    
+    /* الأزرار السيبرانية */
+    .stButton>button { 
+        width: 100%; border-radius: 12px; height: 4em; 
+        background: linear-gradient(45deg, #bc13fe, #3d5afe); 
+        color: white; border: none; font-weight: bold; font-size: 18px;
+        transition: 0.4s; text-transform: uppercase; letter-spacing: 2px;
+    }
+    .stButton>button:hover { box-shadow: 0 0 25px #bc13fe; transform: scale(1.02); }
+
+    /* جداول النيون */
+    .stDataFrame { border: 1px solid #3d5afe !important; border-radius: 10px; }
+    h1, h2, h3 { color: #bc13fe !important; text-shadow: 0 0 8px #bc13fe; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. محرك التحليل العميق لـ TCR ---
+# --- 2. المحرك المالي TCR ---
 def analyze_stock_deep(symbol):
     try:
         ticker = yf.Ticker(symbol)
@@ -25,99 +48,92 @@ def analyze_stock_deep(symbol):
         financials = ticker.financials
         cf = ticker.cashflow
         
-        if financials.empty or 'Operating Income' not in financials.index:
-            return None, "بيانات مالية ناقصة"
-
-        # --- حساب مؤشرات بيتر لينش (النمو 🚀) ---
+        # استخراج مؤشرات لينش (النمو)
         peg = info.get('pegRatio', 999)
-        # نمو EPS (مقارنة ربعية تشغيلية)
         eps_g = info.get('earningsQuarterlyGrowth', 0) * 100
-        # الديون / الملكية
         debt_equity = info.get('debtToEquity', 999) / 100
-        # النقد الصافي
         net_cash = info.get('totalCash', 0) - info.get('totalDebt', 0)
-        # جودة الأرباح FCF vs Net Income
-        fcf = cf.loc['Free Cash Flow'].iloc if 'Free Cash Flow' in cf.index else 0
-        net_inc = financials.loc['Net Income Common Stock Holders'].iloc
+        fcf = cf.loc['Free Cash Flow'].iloc[0] if 'Free Cash Flow' in cf.index else 0
+        net_inc = financials.loc['Net Income Common Stock Holders'].iloc[0] if 'Net Income Common Stock Holders' in financials.index else 1
         fcf_quality = fcf / net_inc if net_inc > 0 else 0
 
-        # --- حساب مؤشرات بافيت (القيمة 💰) ---
+        # استخراج مؤشرات بافيت (القيمة)
         pe = info.get('trailingPE', 999)
         payout = info.get('payoutRatio', 0) * 100
-        
-        # اختبارات المطابقة
+
+        # فلاتر TCR الصارمة
         lynch_pass = (peg < 1.0 and 20 <= eps_g <= 50 and debt_equity < 0.35 and net_cash > 0 and fcf_quality > 1.0)
         buffett_pass = (pe <= 15 and 20 <= payout <= 60 and debt_equity < 0.50)
 
         res = {
-            "Symbol": symbol,
-            "Name": info.get('longName', 'N/A'),
-            "Type": "🚀 نمو صارم" if lynch_pass else ("💰 عوائد ذهبية" if buffett_pass else "فشل"),
+            "Symbol": symbol, "Name": info.get('longName', 'N/A'),
+            "Type": "🚀 GROWTH" if lynch_pass else ("💰 VALUE" if buffett_pass else "FAIL"),
             "PEG": peg, "EPS_G": eps_g, "D_E": debt_equity, "Net_Cash": net_cash,
             "FCF_Q": fcf_quality, "PE": pe, "Payout": payout
         }
         return res, "OK"
     except:
-        return None, "خطأ فني"
+        return None, "Error"
 
-# --- 3. الواجهة الرئيسية ---
-st.title("🛡️ نظام TCR: رادار بافيت ولينش")
-st.markdown("<p style='text-align: center;'>فحص القوائم المالية لـ 200+ شركة سعودية لحظة بلحظة</p>", unsafe_allow_html=True)
+# --- 3. واجهة التحكم والبحث ---
+st.markdown("<h1>🔮 TCR: THE CYBER SCANNER</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #3d5afe;'>رادار فحص القوائم المالية للسوق السعودي - نسخة النيون</p>", unsafe_allow_html=True)
 
-# عدادات علوية
-c1, c2, c3, c4 = st.columns(4)
-total_scanned = c1.empty()
-matches_found = c2.empty()
-failed_debt = c3.empty()
-failed_growth = c4.empty()
+col1, col2, col3, col4 = st.columns(4)
+total_view = col1.empty()
+match_view = col2.empty()
+debt_view = col3.empty()
+growth_view = col4.empty()
 
-start_btn = st.button("إطلاق رادار TCR التشغيلي ⚡")
+start_btn = st.button("إطلاق المسح السيبراني ⚡")
 
 if start_btn:
     found = []
-    # إحصائيات حية
-    cnt, m_cnt, d_fail, g_fail = 0, 0, 0, 0
+    scanned, matches, d_fail, g_fail = 0, 0, 0, 0
     
     ranges = [range(1000, 1331), range(2000, 2383), range(4000, 4349), range(7000, 7205)]
-    all_codes = [f"{c}.SR" for r in ranges for c in r]
-    
-    status_box = st.empty()
-    
+    all_codes = [f"{c}.SR" for r in ranges for code_range in ranges for c in code_range]
+    all_codes = list(dict.fromkeys(all_codes)) # إزالة التكرار
+
+    live_status = st.empty()
+
     for sym in all_codes:
-        cnt += 1
-        with status_box.container():
+        scanned += 1
+        with live_status.container():
             st.markdown(f"""
             <div class="status-card">
-                <h4>🔍 يتم الآن تحليل: <span style='color:#58A6FF'>{sym}</span></h4>
-                <p>مراجعة: PEG | الديون | التدفق النقدي | مكرر الربحية</p>
+                <h3 class="neon-purple">🔍 تحليل الهدف: {sym}</h3>
+                <p>مراجعة تدفق النقد السنوي | فحص جودة الأرباح التشغيلية | اختبار الملاءة المالية</p>
+                <div style="display: flex; justify-content: space-around;">
+                    <span class="neon-blue">PEG: SCANNING</span>
+                    <span class="neon-blue">DEBT: CHECKING</span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
-        
+
         data, status = analyze_stock_deep(sym)
         
         if data:
-            # تحديث عدادات الفشل (للعلم فقط)
             if data['D_E'] > 0.5: d_fail += 1
             if not (20 <= data['EPS_G'] <= 50): g_fail += 1
             
-            if data['Type'] != "فشل":
+            if data['Type'] != "FAIL":
+                matches += 1
                 found.append(data)
-                m_cnt += 1
-                st.toast(f"🎯 تم صيد فرصة: {sym}", icon="✅")
-        
-        # تحديث الأرقام الحية
-        total_scanned.metric("تم فحصه", cnt)
-        matches_found.metric("فرص مكتشفة", m_cnt, delta_color="normal")
-        failed_debt.metric("فشل (ديون)", d_fail)
-        failed_growth.metric("فشل (نمو)", g_fail)
-        
-        time.sleep(0.05)
+                st.toast(f"🎯 تم صيد فرصة ذهبية: {sym}", icon="🔥")
 
-    status_box.empty()
-    st.markdown("---")
+        # تحديث العدادات الحية بلمسة نيون
+        total_view.markdown(f"<div class='stMetric'><p>الممسوح</p><h2 class='neon-blue'>{scanned}</h2></div>", unsafe_allow_html=True)
+        match_view.markdown(f"<div class='stMetric'><p>الفرص</p><h2 class='neon-purple'>{matches}</h2></div>", unsafe_allow_html=True)
+        debt_view.markdown(f"<div class='stMetric'><p>استبعاد (ديون)</p><h2 style='color: #ff4b2b;'>{d_fail}</h2></div>", unsafe_allow_html=True)
+        growth_view.markdown(f"<div class='stMetric'><p>استبعاد (نمو)</p><h2 style='color: #ff4b2b;'>{g_fail}</h2></div>", unsafe_allow_html=True)
+        
+        time.sleep(0.01)
+
+    live_status.empty()
     if found:
-        st.header("🏆 القائمة الذهبية المكتشفة")
+        st.markdown("<h2 class='neon-purple'>🏆 القائمة الذهبية المكتشفة</h2>", unsafe_allow_html=True)
         df = pd.DataFrame(found).drop(columns=['Type'])
-        st.dataframe(df.style.background_gradient(cmap='Blues'), use_container_width=True)
+        st.dataframe(df.style.set_properties(**{'background-color': '#050505', 'color': '#bc13fe', 'border-color': '#3d5afe'}))
     else:
-        st.error("📉 لا يوجد أي سهم حالياً يجمع بين أمان بافيت ونمو بيتر لينش الصارم.")
+        st.error("📉 لم يتم العثور على فرص تطابق المعايير الصارمة اليوم.")
